@@ -1,7 +1,7 @@
 public class Tool {
     private String toolCode;
     private ToolType toolType;
-    private String brand;       // TODO: does brand impact any other value?
+    private String brand;
     private double dailyCharge;
     private boolean weekendFree;
     private boolean holidayFree;

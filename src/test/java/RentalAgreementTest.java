@@ -11,9 +11,9 @@ import java.util.Arrays;
 import java.util.List;
 
 class RentalAgreementTest {
-    private final double LADDER_PRICE = 2.15;
-    private final double CHAINSAW_PRICE = 5.20;
-    private final double JACKHAMMER_PRICE = 8.45;
+    private final double LADDER_PRICE = 50;
+    private final double CHAINSAW_PRICE = 100;
+    private final double JACKHAMMER_PRICE = 150;
 
     private final boolean LADDER_WKD_FREE = false;
     private final boolean CHAINSAW_WKD_FREE = true;
@@ -23,6 +23,10 @@ class RentalAgreementTest {
     private final boolean CHAINSAW_HOL_FREE = false;
     private final boolean JACKHAMMER_HOL_FREE = true;
 
+    /**
+     * Test ladder rental which takes place during Independence Day
+     * @throws Exception
+     */
     @Test   // Specification Test 2
     void calculateLadderIndependeceDayTest() throws Exception {
         ToolType toolType = ToolType.LADDER;    // weekendFree: false   holidayFree: true
@@ -58,6 +62,10 @@ class RentalAgreementTest {
         System.out.println(rentAgmt.getDocument());
     }
 
+    /**
+     * Test chainsaw rental that takes place during Independence Day
+     * @throws Exception
+     */
     @Test   // Specification Test 3
     void calculateChainsawIndependeceDayTest() throws Exception {
         ToolType toolType = ToolType.CHAINSAW;  // weekendFree: true   holidayFree: false
@@ -93,6 +101,10 @@ class RentalAgreementTest {
         System.out.println(rentAgmt.getDocument());
     }
 
+    /**
+     * Test jackhammer rental that takes place during Independence Day
+     * @throws Exception
+     */
     @Test   // Specification Test 5
     void calculateJackhammerIndependeceDayTest() throws Exception {
         ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
@@ -128,6 +140,10 @@ class RentalAgreementTest {
         System.out.println(rentAgmt.getDocument());
     }
 
+    /**
+     * Test jackhammer rental that takes place during Independence day
+     * @throws Exception
+     */
     @Test   // Specification Test 6
     void calculateJackhammerIndependeceDayTest2() throws Exception {
         ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
@@ -163,39 +179,12 @@ class RentalAgreementTest {
         System.out.println(rentAgmt.getDocument());
     }
 
-    // TODO: clean this up
-    @Test   // Specification Test 1
-    void calculateJackhammerLaborDayTest1() throws Exception {
-        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
-        String toolCode = "JAKR";
-        String brand = "Werner";
-        double dailyPrice = JACKHAMMER_PRICE;
-        int discount = 101;
-        int daysRented = 5;
-        int daysCharged = 0;    // This value changes depending on tool and date of rental period
-        LocalDate checkoutDate = createDate("2015-09-03");
-        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
-        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
-        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
-
-        Tool tool = createTool(toolType, toolCode, brand);
-
-        List<Tool> tools = Arrays.asList(tool);
-        Order order = new Order(tools, checkoutDate, daysRented);
-
-        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
-        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
-
-        Assertions.assertThrows(Exception.class, ()->
-            rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
-        );
-
-        // Print document to console
-        System.out.println(rentAgmt.getDocument());
-    }
-
+    /**
+     * Test jackhammer rental that takes place during Labor Day
+     * @throws Exception
+     */
     @Test   // Specification Test 4
-    void calculateJackhammerLaborDayTest2() throws Exception {
+    void calculateJackhammerLaborDayTest() throws Exception {
         ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
         String toolCode = "JAKD";
         String brand = "DeWalt";
@@ -229,6 +218,114 @@ class RentalAgreementTest {
         System.out.println(rentAgmt.getDocument());
     }
 
+    /**
+     * Test for rental with discount that is too high
+     * @throws Exception
+     */
+    @Test   // Specification Test 1
+    void calculateDiscountTooHighTest() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        int discount = 101;
+        int daysRented = 5;
+        LocalDate checkoutDate = createDate("2015-09-03");
+
+        Tool tool = createTool(toolType, toolCode, brand);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+
+        Assertions.assertThrows(Exception.class, ()->
+                rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
+        );
+    }
+
+    /**
+     * Test for rental with discount that is too low
+     * @throws Exception
+     */
+    @Test
+    void calculateDiscountTooLowTest() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        int discount = -10;
+        int daysRented = 0;
+        LocalDate checkoutDate = createDate("2015-09-03");
+
+        Tool tool = createTool(toolType, toolCode, brand);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+
+        Assertions.assertThrows(Exception.class, ()->
+                rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
+        );
+    }
+
+    /**
+     * Test for rental with too few days
+     * @throws Exception
+     */
+    @Test
+    void calculateDaysRentedTooLowTest() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        int discount = 0;
+        int daysRented = 0;
+        LocalDate checkoutDate = createDate("2015-09-03");
+
+        Tool tool = createTool(toolType, toolCode, brand);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+
+        Assertions.assertThrows(Exception.class, ()->
+                rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
+        );
+    }
+
+    /**
+     * Test for rental with negative dailyCost
+     * @throws Exception
+     */
+    @Test
+    void calculateNegativeDailyCostTest() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        int discount = 0;
+        int daysRented = 5;
+        LocalDate checkoutDate = createDate("2015-09-03");
+
+        Tool tool = new Tool(toolType, toolCode, brand, -50.00, false, false);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+
+        Assertions.assertThrows(Exception.class, ()->
+                rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
+        );
+    }
+
+    /**
+     * Assert that all member variables in RentalAgreement are initialized
+     * @param rentAgree
+     */
     private void assertRentalAgreementNotNull(RentalAgreement rentAgree) {
         Assertions.assertNotNull(rentAgree.getDocument());
         Assertions.assertNotNull(rentAgree.getDiscountPercent());
@@ -239,6 +336,22 @@ class RentalAgreementTest {
         Assertions.assertNotNull(rentAgree.getPrediscountTotal());
     }
 
+    /**
+     * Assert that all RentalAgreement values match expected values
+     * @param rentAgmt
+     * @param toolCode
+     * @param toolType
+     * @param brand
+     * @param rentalDays
+     * @param chargeDays
+     * @param checkoutDate
+     * @param dueDate
+     * @param dailyRentalCharge
+     * @param preDiscountCharge
+     * @param discountPer
+     * @param discountAmt
+     * @param finalCharge
+     */
     private void assertValuesEqual(RentalAgreement rentAgmt, String toolCode, ToolType toolType, String brand,
                                    int rentalDays, int chargeDays,  LocalDate checkoutDate, LocalDate dueDate,
                                    double dailyRentalCharge, double preDiscountCharge, int discountPer,
@@ -261,6 +374,13 @@ class RentalAgreementTest {
         Assertions.assertEquals(finalCharge, rentAgmt.getFinalAmount());
     }
 
+    /**
+     * Create tool object for testing
+     * @param toolType
+     * @param toolCode
+     * @param brand
+     * @return
+     */
     private Tool createTool(ToolType toolType, String toolCode, String brand) {
         double dailyPrice;
         boolean wkdChg;
@@ -285,18 +405,36 @@ class RentalAgreementTest {
         return tool;
     }
 
+    /**
+     * Create RentalAgreement test object
+     * @param order
+     * @param discountPercentage
+     * @param holidays
+     * @return
+     */
     private RentalAgreement createRentalAgreement(Order order, int discountPercentage, List<LocalDate> holidays) {
         RentalAgreement rentAgree = new RentalAgreement(order, discountPercentage, holidays);
 
         return  rentAgree;
     }
 
+    /**
+     * Create date in LocalDate format
+     * @param date
+     * @return
+     */
     private LocalDate createDate(String date) {
         LocalDate localDate = LocalDate.parse(date);
 
         return localDate;
     }
 
+    /**
+     * Create holidays for year of rental
+     * @param year
+     * @return
+     * @throws Exception
+     */
     private List<LocalDate> createHolidays(int year) throws Exception {
         LocalDate indepDay = LocalDate.parse(year + "-07-04");
         YearMonth laborDayYearMonth = YearMonth.parse(year + "-09");

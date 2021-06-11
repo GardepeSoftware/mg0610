@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-// TODO: add logging and comments
-
+/**
+ * Class which holds the business logic for creating a rental agreement document
+ */
 public class RentalAgreement {
     private String document;
     private Order order;
@@ -19,8 +20,9 @@ public class RentalAgreement {
     private double discountedAmt;
     private double finalAmount;
     List<LocalDate> holidays;
-
     private LocalDate dueDate;
+
+    // Map of charge days for each tool in order
     private Map<String, Integer> toolChargeDaysMap;
 
     public RentalAgreement(Order order, int discountPercent, List<LocalDate> holidays) {
@@ -30,7 +32,12 @@ public class RentalAgreement {
         toolChargeDaysMap = new HashMap<>();
     }
 
+    /**
+     * Calculate values needed for rental agreement document
+     * @throws Exception
+     */
     public void calculate() throws Exception {
+        LogUtil.log("Rental agreement calculation started.");
         if(valid()) {
             calcPrices();
         } else {
@@ -38,6 +45,10 @@ public class RentalAgreement {
         }
     }
 
+    /**
+     * Check if rental values valid
+     * @return
+     */
     private boolean valid() {
         if(this.order.getDaysRented() < 1) {
             return false;
@@ -47,9 +58,18 @@ public class RentalAgreement {
             return false;
         }
 
+        for(Tool tool : this.order.getTools()) {
+            if(tool.getDailyCharge() < 0) {
+                return false;
+            }
+        }
+
         return true;
     }
 
+    /**
+     * Calculate prices of tools rented
+     */
     private void calcPrices() {
         double total = 0;
 
@@ -62,19 +82,31 @@ public class RentalAgreement {
         this.prediscountTotal = MoneyUtil.round(total);
         this.finalAmount = MoneyUtil.applyDiscount(this.prediscountTotal, discountPercent);
         this.discountedAmt = this.prediscountTotal - this.finalAmount;
+
+        LogUtil.log("Final total calculated.");
     }
 
+    /**
+     * Calculate number of charged days for a tool
+     * @param tool
+     * @return
+     */
     private int calcDays(Tool tool) {
         int freeDayCount = 0;
 
         if(tool.isWeekendFree() || tool.isHolidayFree()) {
             freeDayCount = countFreeDays(tool.isWeekendFree(), tool.isHolidayFree());
-//            System.out.println("freeDayCount: " + freeDayCount);
         }
 
         return order.getDaysRented() - freeDayCount;
     }
 
+    /**
+     * Count amount of free days within rental period
+     * @param weekendFree
+     * @param holidayFree
+     * @return
+     */
     private int countFreeDays(boolean weekendFree, boolean holidayFree) {
         LocalDate indexDate = order.getCheckoutDay();
         LocalDate dueDate = order.getDueDate();
@@ -95,6 +127,14 @@ public class RentalAgreement {
         return freeDayCount;
     }
 
+    /**
+     * Check how many free days should be counted for holidays that fall on weekends. Holidays
+     * should be shifted to nearest weekday if possible.
+     * @param dateToCheck
+     * @param weekendFree
+     * @param holidayFree
+     * @return
+     */
     private int countWeekendHolidaysFree(LocalDate dateToCheck, boolean weekendFree, boolean holidayFree) {
         int freeDayCount = 0;
 
@@ -116,6 +156,11 @@ public class RentalAgreement {
         return freeDayCount;
     }
 
+    /**
+     * Check if day a weekend day
+     * @param date
+     * @return
+     */
     private boolean isWeekend(LocalDate date) {
         DayOfWeek day = date.getDayOfWeek();
         if( day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
@@ -124,6 +169,11 @@ public class RentalAgreement {
         return false;
     }
 
+    /**
+     * Check if day is holiday
+     * @param date
+     * @return
+     */
     private boolean isHoliday(LocalDate date) {
         for(LocalDate holiday : holidays) {
             int dateMonth = date.getMonthValue();
@@ -138,6 +188,11 @@ public class RentalAgreement {
         return false;
     }
 
+    /**
+     * For weekend holidays, check if we can shift holiday discount to nearest weekday
+     * @param holiday
+     * @return
+     */
     private boolean doesHolidayCount(LocalDate holiday) {
         if(holiday.getDayOfWeek() == DayOfWeek.SATURDAY) {
             if(holiday != order.getCheckoutDay()) {   // Yesterday was rented. Count as holiday
@@ -152,8 +207,9 @@ public class RentalAgreement {
         return false;
     }
 
-    // TODO: all values need to be in their proper format
-    // TODO: should we just call this in calculate()?
+    /**
+     * Create rental agreement document
+     */
     public void createDocument() {
         StringBuilder sb = new StringBuilder();
         String newLine = System.getProperty("line.separator");
@@ -186,8 +242,15 @@ public class RentalAgreement {
         }
 
         this.document = sb.toString();
+
+        LogUtil.log("Rental agreement document successfully created.");
     }
 
+    /**
+     * Format date for display
+     * @param date
+     * @return
+     */
     private String formatDateString(LocalDate date) {
         String month = Integer.toString(date.getMonthValue());
         String day = Integer.toString(date.getDayOfMonth());
@@ -201,7 +264,7 @@ public class RentalAgreement {
     }
 
 
-    // Getters and Setters
+    // Getters
 
     public String getDocument() {
         return this.document;
@@ -218,6 +281,7 @@ public class RentalAgreement {
     public double getDiscountPercent() {
         return this.discountPercent;
     }
+
 
     public double getDiscountedAmt() {
         return this.discountedAmt;
