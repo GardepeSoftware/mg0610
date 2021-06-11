@@ -5,37 +5,51 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-// TODO: add logging
+// TODO: add logging and comments
 
 public class RentalAgreement {
     private String document;
     private Order order;
 
-    private double totalCost;
-    private int discount;
-    private double discountedCost;
+    private double prediscountTotal;
+    private int discountPercent;
+    private double discountedAmt;
     private double finalAmount;
     List<LocalDate> holidays;
 
     private LocalDate dueDate;
     private Map<String, Integer> toolChargeDaysMap;
 
-    public RentalAgreement(Order order, int discount, List<LocalDate> holidays) {
+    public RentalAgreement(Order order, int discountPercent, List<LocalDate> holidays) {
         this.order = order;
-        this.discount = discount;
+        this.discountPercent = discountPercent;
         this.holidays = holidays;
         toolChargeDaysMap = new HashMap<>();
     }
 
-    public void calculate() {
-        calcPrices();
+    public void calculate() throws Exception {
+        if(valid()) {
+            calcPrices();
+        } else {
+            throw new Exception("Order invalid. Make sure rental is for at least 1 day and discount is between 0-100");
+        }
     }
 
-    // TODO: write test to calculate multiple tools
-    // TODO: calc multiple tools with different rules
-    // TODO: what about different amount of days? Separate rental agreement?
+    private boolean valid() {
+        if(this.order.getDaysRented() < 1) {
+            return false;
+        }
+
+        if(this.discountPercent < 0 || this.discountPercent > 100) {
+            return false;
+        }
+
+        return true;
+    }
+
     private void calcPrices() {
         double total = 0;
 
@@ -45,9 +59,9 @@ public class RentalAgreement {
             total += (days * tool.getDailyCharge());
         }
 
-        this.totalCost = MoneyUtil.roundUp(total);
-        this.discountedCost = MoneyUtil.applyDiscount(this.totalCost, this.discount);
-        this.finalAmount = MoneyUtil.roundUp(this.totalCost - this.discountedCost);
+        this.prediscountTotal = MoneyUtil.round(total);
+        this.finalAmount = MoneyUtil.applyDiscount(this.prediscountTotal, discountPercent);
+        this.discountedAmt = this.prediscountTotal - this.finalAmount;
     }
 
     private int calcDays(Tool tool) {
@@ -55,7 +69,7 @@ public class RentalAgreement {
 
         if(tool.isWeekendFree() || tool.isHolidayFree()) {
             freeDayCount = countFreeDays(tool.isWeekendFree(), tool.isHolidayFree());
-            System.out.println("freeDayCount: " + freeDayCount);
+//            System.out.println("freeDayCount: " + freeDayCount);
         }
 
         return order.getDaysRented() - freeDayCount;
@@ -105,7 +119,6 @@ public class RentalAgreement {
     private boolean isWeekend(LocalDate date) {
         DayOfWeek day = date.getDayOfWeek();
         if( day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
-//            System.out.println(day.toString() + " is a weekend day");
             return true;
         }
         return false;
@@ -113,11 +126,13 @@ public class RentalAgreement {
 
     private boolean isHoliday(LocalDate date) {
         for(LocalDate holiday : holidays) {
-            if(date.equals(holiday)) {
-                System.out.println(date.toString() + " is a holiday");
+            int dateMonth = date.getMonthValue();
+            int dateDay = date.getDayOfMonth();
+            int holidayMonth = holiday.getMonthValue();
+            int holidayDay = holiday.getDayOfMonth();
+
+            if(dateMonth == holidayMonth && dateDay == holidayDay) {
                 return true;
-            } else {
-                System.out.println("Non-holiday: " + date.toString());
             }
         }
         return false;
@@ -138,28 +153,51 @@ public class RentalAgreement {
     }
 
     // TODO: all values need to be in their proper format
-    public void printDocument() {
+    // TODO: should we just call this in calculate()?
+    public void createDocument() {
         StringBuilder sb = new StringBuilder();
+        String newLine = System.getProperty("line.separator");
 
         if(order.getTools().size() > 0) {
             for (Tool tool : order.getTools()) {
-                sb.append("Tool code: " + tool.getToolCode());
-                sb.append("Tool type: " + tool.getToolType().toString());
-                sb.append("Tool brand: " + tool.getBrand());
-                sb.append("Daily rental charge: " + tool.getDailyCharge());
-                sb.append("Charge days: " + toolChargeDaysMap.get(tool.getToolCode()));
+                sb.append(newLine);
+                sb.append(newLine);
+                sb.append("Rental Agreement:" + newLine);
+                sb.append("Tool code: " + tool.getToolCode() + newLine);
+                String toolTypeUprCse =
+                        tool.getToolType().toString().substring(0, 1) + tool.getToolType().toString().substring(1).toLowerCase(Locale.ROOT);
+                sb.append("Tool type: " + toolTypeUprCse + newLine);
+                sb.append("Tool brand: " + tool.getBrand() + newLine);
+                sb.append("Daily rental charge: " + MoneyUtil.formatForDisplay(tool.getDailyCharge()) + newLine);
+                sb.append("Charge days: " + toolChargeDaysMap.get(tool.getToolCode()) + newLine);
             }
 
-            sb.append("Rental days: " + this.order.getDaysRented());
-            sb.append("Check out date: " + this.order.getCheckoutDay().toString()); // TODO: this probably isn't right
-                                                                                    // format
-            sb.append("Due date: " + this.order.getDueDate().toString()); // TODO: this probably isn't right format
-            sb.append("Pre-discount: " + this.totalCost);
-            sb.append("Discount percent: %" + discount);
-            sb.append("Final charge: " + finalAmount);
+            sb.append("Rental days: " + this.order.getDaysRented() + newLine);
+            sb.append("Check out date: " + formatDateString(this.order.getCheckoutDay()) + newLine);
+            sb.append("Due date: " + formatDateString(this.order.getDueDate()) + newLine);
+            sb.append("Pre-discount: " + MoneyUtil.formatForDisplay(this.prediscountTotal) + newLine);
+            sb.append("Discount percent: " + this.discountPercent + "%" + newLine);
+            sb.append("Discount amount: " + MoneyUtil.formatForDisplay(this.prediscountTotal - this.discountedAmt) + newLine);
+            sb.append("Final charge: " + MoneyUtil.formatForDisplay(finalAmount) + newLine);
+            sb.append(newLine);
+            sb.append(newLine);
         } else {
             LogUtil.logError("Can't print rental agreement. You haven't rented any tools yet.");
         }
+
+        this.document = sb.toString();
+    }
+
+    private String formatDateString(LocalDate date) {
+        String month = Integer.toString(date.getMonthValue());
+        String day = Integer.toString(date.getDayOfMonth());
+        String fullYear = Integer.toString(date.getYear());
+        String abrYear = fullYear.substring(2);
+        String slash = "/";
+
+        String formatedDate = month + slash + day + slash + abrYear;
+
+        return formatedDate;
     }
 
 
@@ -173,16 +211,16 @@ public class RentalAgreement {
         return this.order;
     }
 
-    public double getTotalCost() {
-        return this.totalCost;
+    public double getPrediscountTotal() {
+        return this.prediscountTotal;
     }
 
-    public double getDiscount() {
-        return this.discount;
+    public double getDiscountPercent() {
+        return this.discountPercent;
     }
 
-    public double getDiscountedCost() {
-        return this.discountedCost;
+    public double getDiscountedAmt() {
+        return this.discountedAmt;
     }
 
     public double getFinalAmount() {
@@ -191,5 +229,9 @@ public class RentalAgreement {
 
     public LocalDate getDueDate() {
         return order.getDueDate();
+    }
+
+    public Map<String, Integer> getToolChargeDaysMap() {
+        return toolChargeDaysMap;
     }
 }

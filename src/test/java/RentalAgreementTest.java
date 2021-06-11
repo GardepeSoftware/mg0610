@@ -1,6 +1,8 @@
+import com.sun.source.tree.AssertTree;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import utils.DaysOfWeekUtil;
+import utils.MoneyUtil;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -21,79 +23,242 @@ class RentalAgreementTest {
     private final boolean CHAINSAW_HOL_FREE = false;
     private final boolean JACKHAMMER_HOL_FREE = true;
 
-    private LocalDate fourth_of_july;
-    private LocalDate labor_day;
+    @Test   // Specification Test 2
+    void calculateLadderIndependeceDayTest() throws Exception {
+        ToolType toolType = ToolType.LADDER;    // weekendFree: false   holidayFree: true
+        String toolCode = "LADW";
+        String brand = "Werner";
+        double dailyPrice = LADDER_PRICE;
+        int discount = 10;
+        int daysRented = 3;
+        int daysCharged = 2;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2020-07-02");
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
 
-    public RentalAgreementTest() throws Exception {
-       fourth_of_july = LocalDate.parse("2021-07-04");
-       YearMonth laborDayYearMonth = YearMonth.parse("2021-09");
-       labor_day = DaysOfWeekUtil.findFirstOfMonth(laborDayYearMonth, DayOfWeek.MONDAY);
+        Tool tool = createTool(toolType, toolCode, brand);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+        rentAgmt.calculate();
+        rentAgmt.createDocument();
+
+        // Assert that all members vars all instantiated
+        assertRentalAgreementNotNull(rentAgmt);
+
+        // Assert that values in rental agreement match expected values
+        assertValuesEqual(rentAgmt, toolCode, toolType, brand, daysRented, daysCharged, checkoutDate,
+                checkoutDate.plusDays(daysRented), dailyPrice, prediscountTotal, discount, discountAmt, finalCharge);
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
     }
 
-    @Test
-    void calculateLadderTest() {
-        Tool ladder = createTool(ToolType.LADDER, "LADW", "Werner");
+    @Test   // Specification Test 3
+    void calculateChainsawIndependeceDayTest() throws Exception {
+        ToolType toolType = ToolType.CHAINSAW;  // weekendFree: true   holidayFree: false
+        String toolCode = "CHNS";
+        String brand = "Stihl";
+        double dailyPrice = CHAINSAW_PRICE;
+        int discount = 25;
+        int daysRented = 5;
+        int daysCharged = 3;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2015-07-02");  // TODO: verify labor day calc is correct
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
 
-        List<Tool> tools = Arrays.asList(ladder);
-        LocalDate checkoutDate = createDate("2021-07-01");
-        Order order = new Order(tools, checkoutDate, 1);
+        Tool tool = createTool(toolType, toolCode, brand);
 
-        RentalAgreement rentAgree = createRentalAgreement(order, 20);
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
 
-        rentAgree.calculate();
-        assertRentalAgreementNotNull(rentAgree);
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+        rentAgmt.calculate();
+        rentAgmt.createDocument();
 
-//        Assertions.assertEquals(LocalDate.parse("2021-09-01"), rentAgree.getDueDate());
-        Assertions.assertEquals(2.15, rentAgree.getTotalCost());
+        // Assert that all members vars all instantiated
+        assertRentalAgreementNotNull(rentAgmt);
+
+        // Assert that values in rental agreement match expected values
+        assertValuesEqual(rentAgmt, toolCode, toolType, brand, daysRented, daysCharged, checkoutDate,
+                checkoutDate.plusDays(daysRented), dailyPrice, prediscountTotal, discount, discountAmt, finalCharge);
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
     }
 
-    @Test
-    void calculateChainsawTest() {
-        Tool chainsaw = createTool(ToolType.CHAINSAW, "CHNS", "Stihl");
+    @Test   // Specification Test 5
+    void calculateJackhammerIndependeceDayTest() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Ridgid";
+        double dailyPrice = JACKHAMMER_PRICE;
+        int discount = 0;
+        int daysRented = 9;
+        int daysCharged = 6;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2015-07-02");
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
 
-        List<Tool> tools = Arrays.asList(chainsaw);
-        LocalDate date = createDate("2021-06-09");
-        Order order = new Order(tools, date, 13);
-        RentalAgreement rentAgree = createRentalAgreement(order, 10);
+        Tool tool = createTool(toolType, toolCode, brand);
 
-        rentAgree.calculate();
-        assertRentalAgreementNotNull(rentAgree);
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+        rentAgmt.calculate();
+        rentAgmt.createDocument();
+
+        // Assert that all members vars all instantiated
+        assertRentalAgreementNotNull(rentAgmt);
+
+        // Assert that values in rental agreement match expected values
+        assertValuesEqual(rentAgmt, toolCode, toolType, brand, daysRented, daysCharged, checkoutDate,
+                checkoutDate.plusDays(daysRented), dailyPrice, prediscountTotal, discount, discountAmt, finalCharge);
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
     }
 
-    @Test
-    void calculateJackhammerRTest() {
-        Tool jackhammer = createTool(ToolType.JACKHAMMER, "JAKR", "Ridgid");
+    @Test   // Specification Test 6
+    void calculateJackhammerIndependeceDayTest2() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        double dailyPrice = JACKHAMMER_PRICE;
+        int discount = 50;
+        int daysRented = 4;
+        int daysCharged = 1;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2020-07-02");
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
 
-        List<Tool> tools = Arrays.asList(jackhammer);
-        LocalDate date = createDate("2021-06-09");
-        Order order = new Order(tools, date, 4);
-        RentalAgreement rentAgree = createRentalAgreement(order, 15);
+        Tool tool = createTool(toolType, toolCode, brand);
 
-        rentAgree.calculate();
-        assertRentalAgreementNotNull(rentAgree);
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+        rentAgmt.calculate();
+        rentAgmt.createDocument();
+
+        // Assert that all members vars all instantiated
+        assertRentalAgreementNotNull(rentAgmt);
+
+        // Assert that values in rental agreement match expected values
+        assertValuesEqual(rentAgmt, toolCode, toolType, brand, daysRented, daysCharged, checkoutDate,
+                checkoutDate.plusDays(daysRented), dailyPrice, prediscountTotal, discount, discountAmt, finalCharge);
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
     }
 
-    @Test
-    void calculateJackhammerDTest() {
-        Tool jackhammer = createTool(ToolType.JACKHAMMER, "JAKD", "DeWalt");
+    // TODO: clean this up
+    @Test   // Specification Test 1
+    void calculateJackhammerLaborDayTest1() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKR";
+        String brand = "Werner";
+        double dailyPrice = JACKHAMMER_PRICE;
+        int discount = 101;
+        int daysRented = 5;
+        int daysCharged = 0;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2015-09-03");
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
 
-        List<Tool> tools = Arrays.asList(jackhammer);
-        LocalDate date = createDate("2021-06-09");
-        Order order = new Order(tools, date, 6);
-        RentalAgreement rentAgree = createRentalAgreement(order, 25);
+        Tool tool = createTool(toolType, toolCode, brand);
 
-        rentAgree.calculate();
-        assertRentalAgreementNotNull(rentAgree);
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+
+        Assertions.assertThrows(Exception.class, ()->
+            rentAgmt.calculate(), "Expected calculate() to throw Exception but it didn't"
+        );
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
+    }
+
+    @Test   // Specification Test 4
+    void calculateJackhammerLaborDayTest2() throws Exception {
+        ToolType toolType = ToolType.JACKHAMMER;    // weekendFree: true   holidayFree: true
+        String toolCode = "JAKD";
+        String brand = "DeWalt";
+        double dailyPrice = JACKHAMMER_PRICE;
+        int discount = 0;
+        int daysRented = 6;
+        int daysCharged = 3;    // This value changes depending on tool and date of rental period
+        LocalDate checkoutDate = createDate("2015-09-03");
+        double prediscountTotal = MoneyUtil.round(daysCharged * dailyPrice);
+        double finalCharge = MoneyUtil.applyDiscount(prediscountTotal, discount);
+        double discountAmt = MoneyUtil.round(prediscountTotal - finalCharge);
+
+        Tool tool = createTool(toolType, toolCode, brand);
+
+        List<Tool> tools = Arrays.asList(tool);
+        Order order = new Order(tools, checkoutDate, daysRented);
+
+        List<LocalDate> holidays = createHolidays(checkoutDate.getYear());
+        RentalAgreement rentAgmt = createRentalAgreement(order, discount, holidays);
+        rentAgmt.calculate();
+        rentAgmt.createDocument();
+
+        // Assert that all members vars all instantiated
+        assertRentalAgreementNotNull(rentAgmt);
+
+        // Assert that values in rental agreement match expected values
+        assertValuesEqual(rentAgmt, toolCode, toolType, brand, daysRented, daysCharged, checkoutDate,
+                checkoutDate.plusDays(daysRented), dailyPrice, prediscountTotal, discount, discountAmt, finalCharge);
+
+        // Print document to console
+        System.out.println(rentAgmt.getDocument());
     }
 
     private void assertRentalAgreementNotNull(RentalAgreement rentAgree) {
-//        Assertions.assertNotNull(rentAgree.getDocument());
-        Assertions.assertNotNull(rentAgree.getDiscount());
+        Assertions.assertNotNull(rentAgree.getDocument());
+        Assertions.assertNotNull(rentAgree.getDiscountPercent());
         Assertions.assertNotNull(rentAgree.getFinalAmount());
-        Assertions.assertNotNull(rentAgree.getDiscountedCost());
+        Assertions.assertNotNull(rentAgree.getDiscountedAmt());
         Assertions.assertNotNull(rentAgree.getOrder());
         Assertions.assertNotNull(rentAgree.getDueDate());
-        Assertions.assertNotNull(rentAgree.getTotalCost());
+        Assertions.assertNotNull(rentAgree.getPrediscountTotal());
+    }
+
+    private void assertValuesEqual(RentalAgreement rentAgmt, String toolCode, ToolType toolType, String brand,
+                                   int rentalDays, int chargeDays,  LocalDate checkoutDate, LocalDate dueDate,
+                                   double dailyRentalCharge, double preDiscountCharge, int discountPer,
+                                   double discountAmt, double finalCharge) {
+
+        Order order = rentAgmt.getOrder();
+        Tool tool = order.getTools().get(0);
+
+        Assertions.assertEquals(toolCode, tool.getToolCode());
+        Assertions.assertEquals(toolType, tool.getToolType());
+        Assertions.assertEquals(brand, tool.getBrand());
+        Assertions.assertEquals(rentalDays, order.getDaysRented());
+        Assertions.assertEquals(chargeDays, rentAgmt.getToolChargeDaysMap().get(tool.getToolCode()));
+        Assertions.assertEquals(checkoutDate, order.getCheckoutDay());
+        Assertions.assertEquals(dueDate, order.getDueDate());
+        Assertions.assertEquals(dailyRentalCharge, tool.getDailyCharge());
+        Assertions.assertEquals(preDiscountCharge, rentAgmt.getPrediscountTotal());
+        Assertions.assertEquals(discountPer, rentAgmt.getDiscountPercent());
+        Assertions.assertEquals(discountAmt, rentAgmt.getDiscountedAmt());
+        Assertions.assertEquals(finalCharge, rentAgmt.getFinalAmount());
     }
 
     private Tool createTool(ToolType toolType, String toolCode, String brand) {
@@ -115,14 +280,12 @@ class RentalAgreementTest {
             holChg = JACKHAMMER_HOL_FREE;
         }
 
-        Tool tool = new Tool(toolType, brand, toolCode, dailyPrice, wkdChg, holChg);
+        Tool tool = new Tool(toolType, toolCode, brand, dailyPrice, wkdChg, holChg);
 
         return tool;
     }
 
-    private RentalAgreement createRentalAgreement(Order order, int discountPercentage) {
-        List<LocalDate> holidays = Arrays.asList(fourth_of_july, labor_day);
-        System.out.println("labor day is " + labor_day.toString());
+    private RentalAgreement createRentalAgreement(Order order, int discountPercentage, List<LocalDate> holidays) {
         RentalAgreement rentAgree = new RentalAgreement(order, discountPercentage, holidays);
 
         return  rentAgree;
@@ -132,5 +295,13 @@ class RentalAgreementTest {
         LocalDate localDate = LocalDate.parse(date);
 
         return localDate;
+    }
+
+    private List<LocalDate> createHolidays(int year) throws Exception {
+        LocalDate indepDay = LocalDate.parse(year + "-07-04");
+        YearMonth laborDayYearMonth = YearMonth.parse(year + "-09");
+        LocalDate laborDay = DaysOfWeekUtil.findFirstOfMonth(laborDayYearMonth, DayOfWeek.MONDAY);
+
+        return Arrays.asList(indepDay, laborDay);
     }
 }
